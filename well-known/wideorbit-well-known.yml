@@ -1,0 +1,33 @@
+generated: '2026-07-21'
+method: searched
+source: live probes of WideOrbit hosts (.well-known paths) + WO Central Keycloak realm
+description: >-
+  Well-known endpoint discovery for WideOrbit. The WideOrbit.io API gateway
+  (apigateway.wideorbit.com) delegates authentication to the WO Central identity
+  provider, a Keycloak deployment whose "externalgateway" realm publishes a
+  public OpenID Connect discovery document. No security.txt, api-catalog, or
+  ai-plugin.json is published on the marketing or gateway hosts.
+endpoints:
+- path: /.well-known/openid-configuration
+  host: sso.wocentral.com
+  realm: externalgateway
+  url: https://sso.wocentral.com/auth/realms/externalgateway/.well-known/openid-configuration
+  status: 200
+  file: wideorbit-openid-configuration.json
+  type: OpenIDConfiguration
+  note: >-
+    Production WO Central Keycloak realm backing the WideOrbit.io partner API
+    gateway. A parallel pre-production issuer exists at
+    https://ppe-sso.wocentral.com/auth/realms/externalgateway (also 200).
+- path: /.well-known/security.txt
+  host: www.wideorbit.com
+  status: 404
+  file: null
+- path: /.well-known/openid-configuration
+  host: www.wideorbit.com
+  status: 404
+  file: null
+- path: /.well-known/api-catalog
+  host: www.wideorbit.com
+  status: 404
+  file: null

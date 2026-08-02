@@ -1,7 +1,31 @@
 aid: wideorbit
-name: Wideorbit
-description: Wideorbit is a company surfaced as a portfolio company of mayfield and added to the API Evangelist
-  network as a stub for enrichment. This profile is a lead awaiting the enrichment pipeline.
+accessModel:
+  pricing: unknown
+  onboarding: self-serve
+  trial: false
+  try_now: false
+  public: false
+  label: Self-serve signup
+  confidence: medium
+  source:
+  - authentication
+  generated: '2026-07-22'
+  method: derived
+image: https://kinlane-images.s3.amazonaws.com/shared/apis-json/icons/wideorbit.png
+name: WideOrbit
+description: >-
+  WideOrbit is a premium ad management platform for the media industry, giving
+  broadcast television, cable and broadcast networks, radio, and digital
+  publishers a single system to sell, traffic, bill, and reconcile advertising
+  across linear, digital, and cross-media campaigns. Its products span WO
+  Traffic, WO Network, WO Omni, WO Media Sales, WO Programmatic, and the WO
+  Aurora radio automation suite, all reached through the WO Central workspace.
+  For integration partners, WideOrbit.io exposes a certified developer program
+  and an OIDC-secured API gateway that offers real-time, object-level access to
+  Traffic, Network, and Omni data, complemented by the WO Data Bridge cloud data
+  warehouse. WideOrbit manages roughly $33 billion in annual ad revenue for
+  6,450+ stations and networks. It was surfaced as a portfolio company of
+  Mayfield and enriched in the API Evangelist network.
 url: https://raw.githubusercontent.com/api-evangelist/wideorbit/refs/heads/main/apis.yml
 x-type: company
 x-source: vc-portfolio
@@ -11,12 +35,76 @@ x-tier: stub
 x-tier-reason: portfolio-lead
 specificationVersion: '0.20'
 created: '2026-07-17'
-modified: '2026-07-17'
+modified: '2026-07-21'
 tags:
 - Company
-apis: []
+- Advertising
+- AdTech
+- Media
+- Broadcasting
+- Radio
+- Television
+- Ad Management
+- Programmatic
+- Media Sales
+apis:
+- name: WideOrbit.io API Gateway
+  description: >-
+    Certified-partner API gateway for WideOrbit.io providing real-time,
+    object-level interaction with WideOrbit Traffic, Network, and Omni systems.
+    Access is restricted to authorized, WideOrbit-certified software providers
+    and secured with OpenID Connect (Keycloak) via WO Central single sign-on;
+    the API catalog and specifications are published inside the authenticated
+    developer portal rather than openly.
+  humanURL: https://www.wideorbit.com/io/
+  baseURL: https://apigateway.wideorbit.com
+  tags:
+  - Advertising
+  - Media
+  - Ad Management
+  properties:
+  - type: Authentication
+    url: authentication/wideorbit-authentication.yml
+  - type: OAuthScopes
+    url: scopes/wideorbit-scopes.yml
+common:
+- type: DomainSecurity
+  url: security/wideorbit-domain-security.yml
+- type: Conformance
+  url: conformance/wideorbit-conformance.yml
+- type: OAuthScopes
+  url: scopes/wideorbit-scopes.yml
+- type: Website
+  url: https://www.wideorbit.com
+- type: DeveloperPortal
+  url: https://www.wideorbit.com/io/
+- type: Documentation
+  url: https://www.wideorbit.com/io/
+- type: SignUp
+  url: https://www.wocentral.com/
+- type: Login
+  url: https://www.wocentral.com/
+- type: Support
+  url: https://www.wideorbit.com/product-support/
+- type: Blog
+  url: https://www.wideorbit.com/blog/
+- type: GitHubOrganization
+  url: https://github.com/wideorbit
+- type: TermsOfService
+  url: https://www.wideorbit.com/terms-and-conditions
+- type: PrivacyPolicy
+  url: https://www.wideorbit.com/privacy
+- type: WellKnown
+  url: well-known/wideorbit-well-known.yml
+- type: Authentication
+  url: authentication/wideorbit-authentication.yml
 maintainers:
 - FN: Kin Lane
   email: kin@apievangelist.com
 - FN: APIs.json
   email: info@apis.io
+x-enrichment:
+  date: '2026-07-21'
+  status: enriched
+  artifacts_added: 6
+  pass: local-v1

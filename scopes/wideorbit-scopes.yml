@@ -1,0 +1,36 @@
+generated: '2026-07-21'
+method: searched
+source: >-
+  scopes_supported from the WO Central Keycloak "externalgateway" realm OIDC
+  discovery document
+  (https://sso.wocentral.com/auth/realms/externalgateway/.well-known/openid-configuration)
+docs: https://www.wideorbit.com/io/
+summary: >-
+  OAuth 2.0 / OpenID Connect scopes advertised by the WO Central identity
+  provider realm that guards the WideOrbit.io API gateway. These are the
+  identity-provider (Keycloak) realm scopes; fine-grained business
+  authorizations for Traffic/Network/Omni objects are provisioned per
+  certified-partner client and documented inside the authenticated developer
+  portal rather than published publicly.
+flow: authorization_code
+scopes:
+- name: openid
+  description: Enables OpenID Connect; required to obtain an ID token. This is the scope the gateway client requests by default.
+- name: profile
+  description: Access to the end user's basic profile claims (name, preferred_username, etc.).
+- name: email
+  description: Access to the user's email address and email_verified claim.
+- name: address
+  description: Access to the user's postal address claim.
+- name: phone
+  description: Access to the user's phone number claims.
+- name: roles
+  description: Includes realm and client role mappings in the token for authorization decisions.
+- name: offline_access
+  description: Grants a refresh token for long-lived, offline machine-to-machine access.
+- name: microprofile-jwt
+  description: Emits MicroProfile-JWT compatible claims (groups, upn) for service authorization.
+- name: acr
+  description: Authentication Context Class Reference; conveys the level/assurance of authentication.
+- name: web-origins
+  description: Controls allowed CORS web origins for browser-based clients.

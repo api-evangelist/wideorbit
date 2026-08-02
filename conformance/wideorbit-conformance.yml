@@ -1,0 +1,39 @@
+generated: '2026-07-21'
+method: searched
+source: >-
+  live WO Central Keycloak "externalgateway" OIDC discovery document +
+  observed apigateway.wideorbit.com authorization-code redirect
+description: >-
+  Cross-cutting standards conformance for the WideOrbit.io API gateway. Assessed
+  from the identity provider's OpenID Connect metadata and observed gateway
+  behavior. The gateway's business API surface is behind partner authentication,
+  so payload-level standards (json:api, rfc9457, pagination) could not be
+  verified and are recorded as unknown rather than asserted.
+standards:
+- id: oauth2
+  conforms: true
+  evidence: >-
+    apigateway.wideorbit.com redirects unauthenticated requests to a Keycloak
+    authorization endpoint using response_type=code (OAuth 2.0 authorization-code
+    flow); token endpoint and multiple grant types (client_credentials,
+    refresh_token) advertised.
+- id: oidc
+  conforms: true
+  evidence: >-
+    Realm publishes a compliant /.well-known/openid-configuration with issuer,
+    authorization_endpoint, token_endpoint, jwks_uri, userinfo, and openid scope.
+- id: fapi
+  conforms: false
+  evidence: >-
+    No FAPI security profile advertised; realm permits implicit flow and password
+    grant, which FAPI 2.0 disallows. tls_client_auth and private_key_jwt are
+    available but FAPI conformance is not claimed.
+- id: rfc9457
+  conforms: unknown
+  evidence: Error envelope not observable without partner authentication.
+- id: json:api
+  conforms: unknown
+  evidence: Response media types not observable without partner authentication.
+- id: pagination
+  conforms: unknown
+  evidence: Collection semantics not observable without partner authentication.
