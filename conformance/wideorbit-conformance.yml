@@ -1,14 +1,18 @@
-generated: '2026-07-21'
+generated: '2026-08-12'
 method: searched
 source: >-
   live WO Central Keycloak "externalgateway" OIDC discovery document +
-  observed apigateway.wideorbit.com authorization-code redirect
+  observed apigateway.wideorbit.com authorization-code redirect + the WO Data
+  API Guide 4.2.1
+  (https://www.wideorbit.com/wp-content/uploads/2022/07/WO-DATA-API-Guide-Version-421_New.pdf)
 description: >-
-  Cross-cutting standards conformance for the WideOrbit.io API gateway. Assessed
-  from the identity provider's OpenID Connect metadata and observed gateway
-  behavior. The gateway's business API surface is behind partner authentication,
-  so payload-level standards (json:api, rfc9457, pagination) could not be
-  verified and are recorded as unknown rather than asserted.
+  Cross-cutting standards conformance for WideOrbit's two API surfaces. The
+  identity layer is assessed from the identity provider's OpenID Connect
+  metadata and observed gateway behavior; the payload layer is now assessable
+  too, because WideOrbit publishes the WO Data API Guide 4.2.1 as a public PDF.
+  Where the guide is explicit, "unknown" from the previous pass has been
+  replaced with a determination. The WideOrbit.io gateway's own business payloads
+  remain behind partner authentication and are still not asserted.
 standards:
 - id: oauth2
   conforms: true
@@ -16,12 +20,20 @@ standards:
     apigateway.wideorbit.com redirects unauthenticated requests to a Keycloak
     authorization endpoint using response_type=code (OAuth 2.0 authorization-code
     flow); token endpoint and multiple grant types (client_credentials,
-    refresh_token) advertised.
+    refresh_token) advertised. Applies to the WideOrbit.io gateway only — the WO
+    Data API uses flat header keys and no OAuth at all.
 - id: oidc
   conforms: true
   evidence: >-
     Realm publishes a compliant /.well-known/openid-configuration with issuer,
     authorization_endpoint, token_endpoint, jwks_uri, userinfo, and openid scope.
+    A parallel pre-production realm at ppe-sso.wocentral.com publishes the same
+    document (both verified 200 on 2026-08-12).
+- id: pkce
+  conforms: true
+  evidence: >-
+    code_challenge_methods_supported includes S256 (and plain) in the realm
+    discovery document.
 - id: fapi
   conforms: false
   evidence: >-
@@ -29,11 +41,73 @@ standards:
     grant, which FAPI 2.0 disallows. tls_client_auth and private_key_jwt are
     available but FAPI conformance is not claimed.
 - id: rfc9457
-  conforms: unknown
-  evidence: Error envelope not observable without partner authentication.
+  conforms: false
+  evidence: >-
+    The WO Data API Guide documents bare JSON error bodies, not
+    application/problem+json: 401 returns {"Error":"Unauthorized access"} and 500
+    returns {"Message":"Error Message"}. No type, title, status, detail or
+    instance members; the two documented errors do not even share a field name.
 - id: json:api
-  conforms: unknown
-  evidence: Response media types not observable without partner authentication.
+  conforms: false
+  evidence: >-
+    Responses are plain JSON arrays and objects (e.g. the stations list is a bare
+    array of station objects). No data/attributes/relationships envelope, no
+    application/vnd.api+json media type. Export payloads are additionally offered
+    as XML, CSV and RAW.
 - id: pagination
-  conforms: unknown
-  evidence: Collection semantics not observable without partner authentication.
+  conforms: false
+  evidence: >-
+    No standard pagination of any kind. There is no offset, cursor, page or limit
+    parameter and no Link header. Bulk results are pushed in server-driven chunks
+    sized by ChunkRowsCount (10-9999), and end-of-stream is signalled by a
+    negative chunkId equal to the total chunk count — a proprietary convention.
+- id: idempotency
+  conforms: false
+  evidence: >-
+    No idempotency key, no request-deduplication window and no safe-retry
+    semantics are documented. Resubmitting an export creates an independent job
+    with a new RequestId.
+- id: rfc8594
+  conforms: false
+  evidence: >-
+    No Sunset or Deprecation response headers and no deprecation policy. The one
+    deprecated method (Request Stations List) is marked only in PDF prose, with
+    no removal date.
+- id: rfc9110-content-negotiation
+  conforms: false
+  evidence: >-
+    Response format is selected by a DataExportFormat field in the request body
+    rather than by the Accept header. Accept-Encoding: gzip IS honored, but only
+    for HTTP delivery.
+- id: openapi
+  conforms: false
+  evidence: >-
+    No OpenAPI or Swagger document is published anywhere. Probes of
+    /openapi.json, /openapi.yaml, /swagger.json, /v1/openapi.json,
+    /swagger/v1/swagger.json, /api-docs, /docs and /redoc on
+    apigateway.wideorbit.com all return 302 to the WO Central sign-in; the same
+    paths on www.wideorbit.com return 404. The reference ships as a PDF.
+- id: asyncapi
+  conforms: false
+  evidence: >-
+    A real server-initiated push surface exists (chunked delivery to a caller's
+    TargetUrl, plus Kafka/S3/GCP destinations and a callback acknowledgement) but
+    no AsyncAPI document describes it. See asyncapi/wideorbit-webhooks.yml.
+- id: mcp
+  conforms: false
+  evidence: >-
+    No MCP server. tools/list was not attempted because no MCP endpoint is
+    published or discoverable on any WideOrbit host.
+- id: a2a
+  conforms: false
+  evidence: >-
+    No A2A agent card. /.well-known/agent-card.json and /.well-known/agent.json
+    return 404 on www.wideorbit.com and 302-to-sign-in on
+    apigateway.wideorbit.com; wocentral.com returns a 500 runtime error page.
+compliance_claims:
+  published: false
+  evidence: >-
+    No trust center, no SOC 2 / ISO 27001 / PCI / HIPAA / FedRAMP certification
+    page, and no security page. https://www.wideorbit.com/security/ returns 404
+    and trust.wideorbit.com does not resolve. probe-security-programs.py returned
+    vdp=none trust=none on 2026-08-12.

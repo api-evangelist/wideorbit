@@ -1,0 +1,93 @@
+generated: '2026-08-12'
+method: searched
+source: https://www.wideorbit.com/wp-content/uploads/2022/07/WO-DATA-API-Guide-Version-421_New.pdf
+docs: https://www.wideorbit.com/io/
+format: proprietary
+rfc9457: false
+summary: >-
+  The WO Data API Guide 4.2.1 documents two HTTP error responses and one
+  asynchronous failure channel. Neither HTTP error uses RFC 9457
+  application/problem+json; both are bare JSON objects, and — notably — the two
+  of them do not even agree on a field name (401 returns "Error", 500 returns
+  "Message"). There is no machine-readable error code, no type URI, no
+  correlation id on the error body itself, and no published enumeration of
+  4xx responses other than 401. Everything else surfaces asynchronously through
+  the request-status lifecycle rather than as an HTTP status.
+envelope:
+  content_type: application/json
+  fields_observed:
+  - Error
+  - Message
+  note: >-
+    Inconsistent envelope: the unauthorized case keys on "Error", the unhandled
+    server error keys on "Message". A client must branch on status code, not on
+    the body shape.
+problem_types:
+- status: 401
+  name: Unauthorized access
+  envelope_field: Error
+  example: '{ "Error": "Unauthorized access" }'
+  meaning: >-
+    No valid combination of the "partner-id", "api-key" and "agreement-key"
+    request headers was found. The same status is returned for a missing key, an
+    unknown key, and a key that is valid but not entitled to the requested
+    Broadcaster/Agreement data area — the API does not distinguish
+    authentication from authorization.
+  remediation: >-
+    Confirm all three header keys are present and belong to the same
+    certified-partner agreement. Credentials are issued by WideOrbit Support,
+    not self-service.
+- status: 500
+  name: Unhandled server error
+  envelope_field: Message
+  example: '{ "Message": "Error Message" }'
+  meaning: >-
+    "When an unhandled error is detected, the server returns the following
+    response." The message string is free text and is not enumerated.
+  remediation: >-
+    The guide instructs the client application to "log and preserve error
+    messages for further assistance" and contact WideOrbit Support — the error
+    text is the only diagnostic handle.
+async_failure_states:
+  note: >-
+    WO Data API exports are asynchronous. A submitted request returns a
+    RequestId; failures after acceptance are reported by polling
+    {root}/api/RequestStats/GetRequestStatus, whose RequestStatus enum carries
+    the real error taxonomy, with detail in the ErrorMessage field.
+  states:
+  - code: Failed
+    meaning: Some errors occurred while executing the request. ErrorMessage carries the detail.
+  - code: PartiallyCompleted
+    meaning: >-
+      Not all of the data transferred successfully. Added to support the
+      Salesforce integration; the caller must reconcile which chunks landed.
+  - code: Abandoned
+    meaning: >-
+      Assigned to In_Progress requests when the Broadcaster Agent goes inactive,
+      the connection goes stale, the agent restarts, or the request expires while
+      waiting in the Data API or WO Central queue. The closest thing WideOrbit
+      publishes to a timeout/backpressure error.
+  - code: Inactive
+    meaning: >-
+      The Broadcaster Agent Service is in an Inactive state and could not accept
+      or process the request.
+  - code: Canceling
+    meaning: A cancel was issued via CancelRequest or the WO Data web UI; termination pending.
+  - code: Canceled
+    meaning: The request was terminated. Terminal.
+diagnostics:
+  endpoint: '{root}/api/Diagnostic/status_check[?full=true]'
+  method: GET
+  auth_header: DiagnosticSecurityKey
+  note: >-
+    Separate operational health channel that reports failing broadcaster
+    connections — {"alert_needed":"yes","details":[{"connection_name":...,
+    "last_status":"inactive", ...}]} — with ?full=true returning every failing
+    connection rather than only changes since the last call. Guarded by its own
+    header key, not by the partner/api/agreement triple.
+gaps:
+- No RFC 9457 problem+json.
+- No stable machine-readable error codes; only HTTP status plus free-text prose.
+- Only one 4xx documented (401). No 400, 403, 404, 409, 422 or 429 reference.
+- No correlation/request id echoed on an error body (RequestId only exists once a request is accepted).
+- Error envelope field name is inconsistent between 401 and 500.

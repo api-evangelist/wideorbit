@@ -1,0 +1,225 @@
+generated: '2026-08-12'
+method: derived
+source: >-
+  derived from the published request/response schemas in the WO Data API Guide
+  4.2.1 —
+  https://www.wideorbit.com/wp-content/uploads/2022/07/WO-DATA-API-Guide-Version-421_New.pdf
+docs: https://www.wideorbit.com/io/
+summary: >-
+  Entity-relationship graph for the WO Data API, derived from the field tables
+  the guide publishes for each method. No OpenAPI exists, so this is read off
+  the documented JSON schemas rather than off $refs. The model is deliberately
+  small: DAPI is an export broker, not a domain API. The business objects — the
+  orders, spots, invoices and logs inside WO Traffic, WO Network and WO Omni —
+  are NOT modelled by the API at all; they are reached indirectly through a
+  server-side RequestType that WideOrbit admins provision, so their shape is
+  invisible from public material and is not asserted here.
+entities:
+- name: Broadcaster
+  description: >-
+    A WideOrbit customer's system instance. The tenancy root; every station and
+    every export request belongs to one.
+  identifiers:
+  - field: BroadcasterInt
+    type: int
+  - field: BroadcasterExternalSystemName
+    type: string
+    note: Name of the target Broadcaster, echoed on request status.
+- name: TrafficStation
+  description: >-
+    A station as WO Traffic knows it. Returned by the DEPRECATED
+    GetAllowedStations method.
+  identifiers:
+  - field: TrafficStationId
+    type: GUID
+  - field: TrafficStationInt
+    type: int
+  fields:
+  - StationId (GUID, may be null)
+  - StationInt (int)
+  - StationCallLetters (string, may be null)
+  - StationName (string)
+  - StationMainPhone (string)
+  deprecated: true
+- name: Station
+  description: >-
+    A station available to the calling agreement, or every Broadcaster station
+    when "Include all stations" is allowed by contract. Returned by the current
+    Request Traffic Stations List method.
+  identifiers:
+  - field: StationId
+    type: GUID
+  - field: StationInt
+    type: int
+  fields:
+  - BroadcasterInt (int)
+  - StationCallLetters (string)
+  - StationName (string)
+  - StationMainPhone (string)
+- name: Agreement
+  description: >-
+    The contractual scope that binds a partner to a slice of WO Network / WO
+    Traffic / WO Omni data. Never returned as an object; it exists only as the
+    agreement-key request header and as the target of CancelRequestsPerAgreement.
+  identifiers:
+  - field: agreement-key
+    type: string (request header)
+- name: Partner
+  description: >-
+    The certified software provider calling the API. Present only as credentials.
+  identifiers:
+  - field: partner-id
+    type: string (request header)
+  - field: api-key
+    type: string (request header)
+- name: RequestType
+  description: >-
+    A named, server-side query provisioned by WideOrbit admins from the Vendor
+    System > SQL Script page. Since namespaces were introduced the value is
+    "RequestGroup.RequestType" (e.g. "General.Orders") or a bare request type
+    when the namespace is global. This is the only handle a caller has on the
+    underlying business data.
+  identifiers:
+  - field: RequestType
+    type: string
+- name: DataRequest
+  description: >-
+    An asynchronous export job. Created by one of the seven delivery-specific
+    submit methods; the unit everything else in the API hangs off.
+  identifiers:
+  - field: RequestId
+    type: GUID
+  fields:
+  - RequestType (string)
+  - DataExportFormat (JSON | XML | CSV | RAW)
+  - ChunkRowsCount (int, 10-9999)
+  - UseProxy (bool, default false)
+  - TargetUrl (string, HTTP delivery)
+  - TargetHeaders[] ({Key, Value})
+  - Parameters[] ({Name, DbType, Value})
+- name: QueryParameter
+  description: >-
+    A typed bind variable for the provisioned RequestType. DbType values come
+    from the SqlDbTypes appendix.
+  fields:
+  - Name (string, @-prefixed)
+  - DbType (SqlDbType)
+  - Value (string)
+- name: RequestStatus
+  description: >-
+    The lifecycle and timing record for a DataRequest, returned by
+    GetRequestStatus.
+  fields:
+  - RequestStatus (Pending | PostedToBa | In_Progress | Complete | Failed | PartiallyCompleted
+    | Deleted | Inactive | Canceling | Canceled | Abandoned)
+  - CreateDate (DateTime, UTC)
+  - CompleteDate (DateTime, UTC)
+  - ErrorMessage (string, nullable)
+  - RequestDuration (HH:MM:SS.MS)
+  - BroadcasterRequestsQueueDuration (HH:MM:SS.MS)
+  - SqlQueryExecutionDuration (HH:MM:SS.MS)
+  - FtpUploadDuration (HH:MM:SS.MS)
+  - Destination (string)
+- name: DataChunk
+  description: >-
+    One packet of exported rows pushed to the caller's destination. Envelope is
+    a JSON-RPC style packet the receiving side must unpack and stitch.
+  fields:
+  - requestId (string)
+  - chunkId (int; the LAST chunk is the negative of the total chunk count)
+  - resultSet (int; always 1 for single-result queries)
+- name: CallbackAcknowledgement
+  description: >-
+    The caller's confirmation that a delivered request was handled, POSTed back
+    to {root}/api/Requests/Update/{requestId}.
+  fields:
+  - IsValidated (bool)
+  - TrackingFieldValue (var, empty when no tracking field is used)
+- name: BroadcasterConnectionStatus
+  description: >-
+    Operational health of a broadcaster connection, from the diagnostic endpoint.
+  fields:
+  - connection_name (string)
+  - last_status (string, e.g. inactive)
+  - last_status_change (DateTime)
+  - last_check (DateTime)
+relationships:
+- from: Station
+  to: Broadcaster
+  type: belongs_to
+  via: BroadcasterInt
+- from: TrafficStation
+  to: Broadcaster
+  type: belongs_to
+  via: BroadcasterInt
+- from: TrafficStation
+  to: Station
+  type: has_one
+  via: StationId
+  note: Nullable on the deprecated payload; the current method returns Station directly.
+- from: Agreement
+  to: Station
+  type: has_many
+  via: agreement-key entitlement
+  note: >-
+    Not expressed as a field. The agreement key decides which stations
+    GetAllowedStations / Request Traffic Stations List will return.
+- from: Partner
+  to: Agreement
+  type: has_many
+  via: 'partner-id + api-key + agreement-key triple'
+- from: DataRequest
+  to: Agreement
+  type: belongs_to
+  via: agreement-key request header
+  note: CancelRequestsPerAgreement cancels every DataRequest under one agreement.
+- from: DataRequest
+  to: RequestType
+  type: belongs_to
+  via: RequestType
+- from: DataRequest
+  to: QueryParameter
+  type: has_many
+  via: Parameters[]
+- from: DataRequest
+  to: RequestStatus
+  type: has_one
+  via: RequestId
+- from: DataRequest
+  to: DataChunk
+  type: has_many
+  via: requestId
+- from: DataRequest
+  to: CallbackAcknowledgement
+  type: has_one
+  via: '{requestId} path parameter'
+- from: RequestStatus
+  to: Broadcaster
+  type: belongs_to
+  via: BroadcasterExternalSystemName
+- from: Broadcaster
+  to: BroadcasterConnectionStatus
+  type: has_one
+  via: connection_name
+id_conventions:
+  guid_fields:
+  - RequestId
+  - StationId
+  - TrafficStationId
+  int_surrogates:
+  - BroadcasterInt
+  - StationInt
+  - TrafficStationInt
+  note: >-
+    WideOrbit carries BOTH a GUID and an integer surrogate for stations and
+    broadcasters, and the two are not interchangeable across methods — the
+    deprecated stations payload keys on TrafficStationInt/TrafficStationId while
+    the current one keys on StationId/StationInt. There are no prefixed,
+    self-describing identifiers.
+gaps:
+- >-
+  The business domain (orders, spots, invoices, logs, avails) is not modelled by
+  the API. It sits behind provisioned RequestTypes whose result-set schemas are
+  never published, so an integrator cannot know the shape of the data they will
+  receive until WideOrbit provisions the request.
+- No OpenAPI or JSON Schema exists to validate any of these shapes against.

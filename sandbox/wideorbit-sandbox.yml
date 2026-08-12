@@ -1,0 +1,69 @@
+generated: '2026-08-12'
+method: probed
+source: >-
+  https://www.wideorbit.com/io/ (names the portal host) + live probes of
+  ppe.apigateway.wideorbit.com and ppe-sso.wocentral.com
+docs: https://www.wideorbit.com/io/
+summary: >-
+  WideOrbit runs a real pre-production environment for the WideOrbit.io API
+  gateway — a full parallel stack, PPE, with its own Kong gateway host and its
+  own Keycloak realm issuer. It is NOT a self-serve sandbox: there are no test
+  credentials, no test data set, no hosted test tokens and no fixture or trigger
+  tooling published anywhere, and the PPE gateway 302s an anonymous caller to
+  the same WO Central sign-in as production. A certified Connector is given PPE
+  access as part of onboarding; the public cannot try the API.
+self_serve: false
+test_credentials_published: false
+test_data_published: false
+environments:
+- name: production
+  gateway: https://apigateway.wideorbit.com
+  issuer: https://sso.wocentral.com/auth/realms/externalgateway
+  status: 302
+  note: >-
+    Redirects to the Keycloak authorization endpoint with client_id=apigateway,
+    response_type=code, scope=openid, redirect_uri=https://apigateway.wideorbit.com/cb.
+- name: pre-production (PPE)
+  gateway: https://ppe.apigateway.wideorbit.com
+  issuer: https://ppe-sso.wocentral.com/auth/realms/externalgateway
+  status: 200
+  note: >-
+    Named on the WideOrbit.io product page as the Dev Portal host. Every path
+    probed — /, /docs, /openapi.json, /.well-known/agent-card.json — resolves to
+    the same "WideOrbit - Sign in" page, i.e. a catch-all authenticated shell
+    rather than a document. The parallel PPE Keycloak realm is what makes this a
+    genuine second environment rather than a marketing label.
+key_modes:
+  note: >-
+    The WO Data API's three header keys — partner-id, api-key, agreement-key —
+    carry NO environment prefix or test/live discriminator. Environment is
+    selected by which {root} host and which agreement key WideOrbit provisions,
+    not by the shape of the credential, so a client cannot tell test from live
+    by inspecting its own key. The guide's sample values ("PrtnID123",
+    "ApiKey123", "Ydg4eFbl") are illustrative placeholders, not usable test
+    credentials.
+test_tooling:
+  test_data_sets: null
+  time_simulation: null
+  triggers_or_fixtures: null
+  note: >-
+    None published. The nearest published facility is
+    {root}/api/Diagnostic/status_check, an operational health check for
+    broadcaster connections, and a "sendTestProfile" flag in the divested WO
+    Streaming targeting SDK — neither is a sandbox for the WideOrbit.io or WO
+    Data APIs.
+onboarding:
+  path: WideOrbit Connector certification
+  url: https://www.wideorbit.com/connectors/
+  note: >-
+    Access to either environment is granted through the certified-Connector
+    program and an Account Executive, then credentialed by WideOrbit Support.
+evidence:
+- url: https://ppe.apigateway.wideorbit.com/
+  status: 200
+  note: Renders "WideOrbit - Sign in".
+- url: https://ppe-sso.wocentral.com/auth/realms/externalgateway/.well-known/openid-configuration
+  status: 200
+  note: Parallel pre-production Keycloak realm — the evidence that PPE is a real environment.
+- url: https://apigateway.wideorbit.com/
+  status: 302

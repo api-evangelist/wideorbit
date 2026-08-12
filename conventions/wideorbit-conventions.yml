@@ -1,0 +1,160 @@
+generated: '2026-08-12'
+method: searched
+source: >-
+  https://www.wideorbit.com/wp-content/uploads/2022/07/WO-DATA-API-Guide-Version-421_New.pdf
+  (WO Data API Guide 4.2.1) + the live WO Central Keycloak "externalgateway"
+  OIDC discovery document + observed apigateway.wideorbit.com behavior
+docs: https://www.wideorbit.com/io/
+summary: >-
+  WideOrbit runs two very different API surfaces with two different conventions.
+  The WideOrbit.io API gateway is a Kong edge in front of WO Traffic, WO Network
+  and WO Omni, secured by OpenID Connect against WO Central and reachable only
+  by certified Connectors; its payload conventions are not public. The WO Data
+  API (DAPI) is the publicly documented surface: a REST-ish, RPC-shaped,
+  asynchronous bulk export service authenticated by three flat header keys, with
+  no idempotency, no cursor pagination, no versioned URI, and a proprietary
+  error envelope. This document records what WideOrbit actually publishes, and
+  is explicit about what it does not.
+surfaces:
+- name: WideOrbit.io API Gateway
+  base: https://apigateway.wideorbit.com
+  edge: Kong (x-kong-request-id / x-kong-response-latency observed) on Google Cloud
+  public_contract: false
+  note: >-
+    Every unauthenticated request, including /openapi.json and /.well-known/*,
+    302s to the Keycloak authorization endpoint. Response conventions cannot be
+    observed anonymously and are NOT asserted here.
+- name: WO Data API (DAPI)
+  base: '{root}'
+  public_contract: true
+  contract_format: PDF only
+  note: >-
+    "{root}" is provisioned per partner — the guide says to "contact your support
+    or account contact to obtain Authentication tokens and API endpoint URI
+    {root} information." No host is published, so none is recorded.
+auth:
+  style: header-keys (WO Data API) + OpenID Connect authorization code (gateway)
+  data_api:
+    headers:
+    - partner-id
+    - api-key
+    - agreement-key
+    model: >-
+      "DAPI uses the closed authentication model, where client authentication and
+      usage patterns are managed by WideOrbit." Each header combination uniquely
+      identifies both the calling client and the WO Network / WO Traffic / WO Omni
+      data area it may reach — the agreement key is the tenancy boundary.
+    transport: HTTPS
+    failure: 401 with {"Error":"Unauthorized access"}
+  gateway:
+    scheme: openIdConnect
+    issuer: https://sso.wocentral.com/auth/realms/externalgateway
+    client_observed: apigateway
+  detail: authentication/wideorbit-authentication.yml
+idempotency:
+  supported: false
+  header: null
+  note: >-
+    NOT DOCUMENTED. The WO Data API guide defines no idempotency key, no
+    request-deduplication window, and no safe-retry semantics. Submitting GetData
+    twice creates two independent exports with two RequestIds. The only related
+    control is CancelRequest, which is compensating rather than idempotent. An
+    integrator retrying a timed-out submission risks duplicate delivery and must
+    reconcile by RequestId themselves.
+pagination:
+  style: server-driven chunking (not pagination)
+  note: >-
+    There is no offset, cursor, page or limit parameter and no next-link. Bulk
+    results are pushed to the caller in packets sized by ChunkRowsCount (range
+    10-9999), each packet carrying requestId, chunkId and resultSet. The caller
+    "is required to implement logic to stitch data back into one continuous
+    dataset."
+  fields:
+    request:
+    - ChunkRowsCount
+    response:
+    - requestId
+    - chunkId
+    - resultSet
+  termination: >-
+    "The last Chunk Id is defined as negative total chunks count value" — the
+    end-of-stream marker is a sign flip on chunkId, not a null cursor. resultSet
+    varies only for multi-result queries; single-result queries always return 1.
+filtering_and_expansion:
+  style: named SQL-style parameters
+  note: >-
+    Requests are shaped by RequestType (a namespaced request identifier such as
+    "General.Orders", provisioned by WideOrbit admins) plus a Parameters[] array
+    of {Name, DbType, Value} triples using @-prefixed names and SqlDbType values
+    (Int, VarChar, ...). There is no field-selection, sparse-fieldset or
+    expansion mechanism — the shape of the result set is fixed by the
+    server-side request type.
+content_negotiation:
+  request: application/json
+  response_formats:
+  - JSON
+  - XML
+  - CSV/TSV
+  - RAW
+  selector: DataExportFormat body field, NOT the Accept header
+  note: >-
+    Format is chosen in the request body, not by content negotiation. RAW
+    performs no transformation and returns the query result as pure text,
+    intended for use with a FOR XML AUTO statement.
+  compression:
+    header: 'Accept-Encoding: gzip'
+    scope: HTTP delivery only
+    note: The receiving endpoint must be able to decompress the incoming packet.
+delivery:
+  model: asynchronous push
+  note: >-
+    The distinguishing convention of this API. A submit call returns a RequestId
+    immediately; the data itself is delivered later to a destination the caller
+    nominates. Seven destinations are documented — HTTP target URL, FTP, local
+    storage, e-mail, AWS S3, GCP, Kafka — each with its own submit operation.
+    For the HTTP destination the caller supplies TargetUrl plus optional
+    TargetHeaders[] {Key,Value}, and UseProxy decides whether the payload comes
+    from the DAPI server or directly from the Broadcaster Agent Service (which
+    determines what the integrator has to firewall-whitelist).
+  detail: asyncapi/wideorbit-webhooks.yml
+tracing:
+  request_id: RequestId (GUID, returned by GetData / GetDataFtp)
+  echoed_in:
+  - the chunked data packets (requestId)
+  - GetRequestStatus responses
+  - CancelRequest path parameter
+  gateway_header: x-kong-request-id (Kong edge; not documented by WideOrbit)
+  note: >-
+    There is no correlation-id request header a client can set. Tracing is
+    server-assigned and only exists once a request has been accepted, so a
+    failed submission has no handle at all.
+timing:
+  timestamps: UTC (CreateDate, CompleteDate)
+  durations: 'HH:MM:SS.MS strings (RequestDuration, BroadcasterRequestsQueueDuration,
+    SqlQueryExecutionDuration, FtpUploadDuration)'
+  note: Durations are formatted strings, not ISO 8601 durations or numeric milliseconds.
+versioning:
+  style: document version, not URI or header version
+  current: WO Data API 4.2.1 (guide updated 2022-07-12)
+  in_uri: false
+  in_header: false
+  note: >-
+    The API path carries no version segment; the guide is versioned instead.
+    WideOrbit describes DAPI as providing access to WO Network, WO Traffic and WO
+    Omni data "in a unified version agnostic manner", which pushes the
+    compatibility burden onto the server-side request types.
+  detail: lifecycle/wideorbit-lifecycle.yml
+errors:
+  format: proprietary JSON, inconsistent field name
+  detail: errors/wideorbit-problem-types.yml
+rate_limits:
+  published: false
+  detail: rate-limits/wideorbit-rate-limits.yml
+gaps:
+- No idempotency key or retry-safety contract.
+- No cursor/offset pagination; caller must reassemble chunks.
+- No versioned URI or version header.
+- No RFC 9457 error format and no error-code enumeration.
+- No published rate limits or rate-limit response headers.
+- No client-settable correlation id.
+- No machine-readable contract of any kind — the reference is a PDF.

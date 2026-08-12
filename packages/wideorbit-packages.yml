@@ -1,0 +1,101 @@
+generated: '2026-08-12'
+method: searched
+source: >-
+  npm registry search + registry.npmjs.org metadata, GitHub orgs
+  https://github.com/WideOrbit and https://github.com/WoStreaming, plus PyPI,
+  NuGet, RubyGems, Packagist, crates.io and PowerShell Gallery searches for
+  "wideorbit"
+summary: >-
+  WideOrbit publishes NO first-party client library for the WideOrbit.io API
+  gateway or for the WO Data API. The registry search across npm, PyPI, NuGet,
+  RubyGems, Packagist, crates.io and the PowerShell Gallery returned zero
+  packages attributable to the WideOrbit that exists today. The only
+  WideOrbit-named packages on any registry belong to WO Streaming, the digital
+  audio streaming business Audacy acquired from WideOrbit in October 2021 and
+  now operates as AmperWave, so they are recorded here as DIVESTED and marked
+  official:false — they are not a current WideOrbit developer surface.
+official_package_count: 0
+sdk_count: 0
+registries_checked:
+- registry: npm
+  query: wideorbit
+  result: 1 hit, divested (see divested[])
+- registry: pypi
+  query: wideorbit
+  result: 404 — no package
+- registry: nuget
+  query: wideorbit
+  result: totalHits 0
+- registry: rubygems
+  query: wideorbit
+  result: empty result set
+- registry: packagist
+  query: wideorbit
+  result: total 0
+- registry: crates.io
+  query: wideorbit
+  result: total 0
+- registry: powershellgallery
+  query: WideOrbit
+  result: 404 — no module
+packages: []
+divested:
+- name: '@wostreaming/targeting-sdk'
+  registry: npm
+  url: https://www.npmjs.com/package/@wostreaming/targeting-sdk
+  repository: https://github.com/WoStreaming/wos-targeting-js-sdk
+  language: javascript
+  license: MIT
+  official: false
+  version: 2.0.0
+  published: '2022-04-12'
+  first_published: '2020-03-20'
+  note: >-
+    Self-describes as the "AmperWave Streaming JavaScript SDK for Targeting".
+    The repository description says "WideOrbit Streaming Targeting SDK", but
+    Audacy acquired WO Streaming's technology, assets and operations in October
+    2021 and renamed the business AmperWave, so the shipping 2.0.0 release
+    (published 2022-04-12, after the divestiture) belongs to Audacy/AmperWave,
+    not to WideOrbit. Recorded for provenance; NOT counted as a WideOrbit SDK.
+- name: WOSTargeting (iOS)
+  registry: cdn
+  url: https://github.com/WoStreaming/wos-targeting-ios-sdk
+  distribution: CocoaPods via private spec repo https://github.com/WoStreaming/Specs.git
+  language: swift
+  official: false
+  version: null
+  published: null
+  note: >-
+    Distributed through a PRIVATE CocoaPods spec repo, not the public trunk, so
+    there is no registry metadata endpoint to read a version or a publish date
+    from. The README pins `pod 'WOSTargeting', '~> 1.0.2'`; the GitHub
+    repository's last push was 2019-10-01. Same WO Streaming divestiture applies.
+- name: WOSTargeting (Android)
+  registry: cdn
+  url: https://github.com/WoStreaming/wos-targeting-android-sdk
+  language: java
+  official: false
+  version: null
+  published: null
+  note: >-
+    No Maven Central coordinate published; consumed from the GitHub repository,
+    whose last push was 2019-10-22. Checked, nothing to record. Same WO
+    Streaming divestiture applies.
+github_orgs:
+- url: https://github.com/WideOrbit
+  repos: 12
+  note: >-
+    All twelve repositories are forks of third-party tooling (Prebid.js,
+    mysql-connector-net, aerospike-admin, s4cmd) or small internal utilities.
+    The most recent push across the whole org is 2017-03-30. No WideOrbit API
+    client library, no spec, no sample integration.
+- url: https://github.com/WoStreaming
+  repos: 5
+  note: WO Streaming / AmperWave — divested to Audacy, October 2021.
+notes: >-
+  Access to the WideOrbit.io API gateway is provisioned through the
+  certified-Connector program; integration partners are expected to call the
+  OIDC-secured gateway and the WO Data API directly over HTTP rather than
+  through a vendor-supplied client library. The absence of any dated first-party
+  package means there is no SDK-decay signal available for this provider — an
+  honest gap, not a guess.

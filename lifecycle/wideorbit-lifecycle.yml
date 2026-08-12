@@ -1,0 +1,101 @@
+generated: '2026-08-12'
+method: searched
+source: >-
+  https://www.wideorbit.com/wp-content/uploads/2022/07/WO-DATA-API-Guide-Version-421_New.pdf
+  + live probes of releasenotes.wideorbit.com, status.wideorbit.com and
+  apigateway.wideorbit.com
+docs: https://www.wideorbit.com/io/
+summary: >-
+  WideOrbit versions its API by document revision rather than by URI or header,
+  publishes no deprecation policy and no Sunset/Deprecation header contract, and
+  operates no public status page. It DOES run a real release-notes system at
+  releasenotes.wideorbit.com, but that system sits behind the same WO Central
+  sign-in as the developer portal, so no dated change history is publicly
+  readable. The one deprecation signal WideOrbit ships is inline: the WO Data
+  API guide labels its Request Stations List method "(Deprecated)" in the table
+  of contents and section heading, and documents Request Traffic Stations List
+  as the replacement.
+versioning:
+  scheme: document-revision
+  current_version: WO Data API 4.2.1
+  version_date: '2022-07-12'
+  in_uri: false
+  in_header: false
+  in_media_type: false
+  note: >-
+    Paths are unversioned ({root}/api/RequestData/GetData). WideOrbit describes
+    the service as delivering WO Network, WO Traffic and WO Omni data "in a
+    unified version agnostic manner", so version skew is absorbed server-side by
+    the provisioned request types rather than exposed to the caller.
+deprecation:
+  policy_published: false
+  sunset_header: false
+  deprecation_header: false
+  notice_period: null
+  note: >-
+    No written deprecation policy, no advance-notice commitment, and no RFC 8594
+    Sunset or Deprecation response headers are documented. Deprecation is
+    communicated only as prose in the PDF reference.
+  deprecated_operations:
+  - operation: Request Stations List
+    uri: '{root}/api/Stations/GetAllowedStations'
+    method: GET
+    marked: '"Request Stations List (Deprecated)" — section heading and table of contents,
+      WO Data API Guide 4.2.1'
+    replacement: Request Traffic Stations List
+    removal_date: null
+    note: >-
+      The replacement drops TrafficStationInt and TrafficStationId and returns
+      BroadcasterInt / StationId / StationInt / StationCallLetters / StationName
+      / StationMainPhone. No removal date is given; the deprecated method is
+      still fully documented.
+changelog:
+  public: false
+  url: https://releasenotes.wideorbit.com/releasenotes/
+  status: 200
+  gated: true
+  note: >-
+    "Release Notes provide a summary of changes for each new build of your
+    WideOrbit software" and can be exported to PDF, Word or Excel — but the
+    system answers 200 with the WO Central "WideOrbit - Sign in" page for an
+    anonymous request, and the bare host https://releasenotes.wideorbit.com/
+    returns 403. There is no publicly readable, dated changelog for the API, so
+    no entries are recorded here and no ChangeLog pointer is wired.
+status_page:
+  public: false
+  url: null
+  note: >-
+    No public status page. https://status.wideorbit.com/ does not resolve and
+    https://www.wideorbit.com/status/ returns 404. Health information exists but
+    is private to partners: the WO Data API exposes
+    {root}/api/Diagnostic/status_check[?full=true], guarded by a
+    DiagnosticSecurityKey header, which reports failing broadcaster connections
+    with last_status / last_status_change / last_check timestamps.
+sla:
+  published: false
+  note: No uptime or support-response SLA is published on the public site.
+support:
+  url: https://www.wideorbit.com/product-support/
+  note: >-
+    The guide routes all API questions — new request types, delivery formats,
+    credentials, the {root} endpoint — through WideOrbit Support and the
+    customer's Account Executive.
+corporate:
+  note: >-
+    WideOrbit has been a wholly owned subsidiary of Lumine Group (Constellation
+    Software) since the acquisition closed in February 2023, operating as an
+    autonomous business unit. Separately, WO Streaming — WideOrbit's digital
+    audio streaming technology, assets and operations — was acquired by Audacy
+    in October 2021 and now runs as AmperWave; any WO Streaming API or SDK is no
+    longer a WideOrbit surface. Recorded here because both events bound what can
+    honestly be attributed to WideOrbit today.
+evidence:
+- url: https://releasenotes.wideorbit.com/releasenotes/
+  status: 200
+  note: 200 but renders the WO Central sign-in page — gated, not published.
+- url: https://releasenotes.wideorbit.com/
+  status: 403
+- url: https://www.wideorbit.com/status/
+  status: 404
+- url: https://www.wideorbit.com/wp-content/uploads/2022/07/WO-DATA-API-Guide-Version-421_New.pdf
+  status: 200

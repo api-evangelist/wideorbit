@@ -1,0 +1,116 @@
+generated: '2026-08-12'
+method: searched
+source: >-
+  https://www.wideorbit.com/wp-content/uploads/2022/07/WO-DATA-API-Guide-Version-421_New.pdf
+  (WO Data API Guide 4.2.1, "Request Data" / "Data Response" / "Callback
+  Request" / "Callback Response" sections) + https://www.wideorbit.com/io/
+docs: https://www.wideorbit.com/io/
+asyncapi_published: false
+summary: >-
+  WideOrbit ships no AsyncAPI document, but it does publish a real
+  server-to-client push surface, and it is the defining shape of the WO Data
+  API: every export is asynchronous, and the payload is POSTed OUT to an
+  endpoint the integrator stands up, not pulled by the integrator. The
+  WideOrbit.io product page separately advertises an events capability —
+  "timely notifications of source data changes from WideOrbit systems" — but
+  that event catalog lives inside the authenticated Dev Portal and no channel,
+  topic or payload for it is public, so none is recorded here.
+delivery_model: server-initiated push to a caller-nominated destination
+subscription_model: >-
+  Per-request, not per-topic. There is no webhook registration endpoint and no
+  subscription object; the destination is supplied on each individual export
+  request. There is no replay, no retry policy and no signature/HMAC scheme
+  documented.
+webhooks:
+- name: Data Response (chunked export delivery)
+  direction: WideOrbit -> integrator
+  transport: HTTP POST
+  target: >-
+    TargetUrl, supplied by the caller on the GetData request (guide example:
+    https://yoursite.com/ProcessData). Optional TargetHeaders[] {Key, Value}
+    pairs are echoed on the outbound call, which is the only mechanism available
+    for authenticating WideOrbit to the receiver.
+  trigger: An accepted export request completes a chunk of rows.
+  payload:
+    envelope: JSON-RPC style packet the receiver must unpack
+    fields:
+    - name: requestId
+      type: string
+      note: The RequestId returned by the GetData method; correlates the packet to the job.
+    - name: chunkId
+      type: int
+      note: >-
+        Identifies the block of rows. The LAST chunk is signalled by a negative
+        value equal to the total chunk count — the end-of-stream marker.
+    - name: resultSet
+      type: int
+      note: Which result set the rows came from; always 1 for single-result queries.
+    body_format: JSON | XML | CSV | RAW, chosen by DataExportFormat on the request
+    compression: 'Accept-Encoding: gzip on the original request makes the delivery gzipped;
+      the receiver must decompress it'
+  routing:
+    UseProxy_true: Data is sent to the client FROM the Data API server.
+    UseProxy_false: >-
+      Data is sent DIRECTLY from the Broadcaster Agent Service (BAS). Default is
+      false. This choice decides which WideOrbit egress the integrator must
+      allow through its firewall — the guide notes that if the Broadcaster has
+      rules preventing outbound communication, the HTTP endpoint has to be
+      whitelisted.
+  receiver_obligation: >-
+    Implement a handler that unpacks the packet and stitches chunks back into one
+    continuous dataset, keyed on requestId + chunkId.
+- name: Callback Response (acknowledgement)
+  direction: integrator -> WideOrbit
+  transport: HTTP POST
+  target: '{root}/api/Requests/Update/{requestId}'
+  headers:
+  - partner-id
+  - api-key
+  - 'Content-Type: application/json'
+  payload:
+    fields:
+    - name: IsValidated
+      type: bool
+      note: Whether the request was successfully handled by the receiver.
+    - name: TrackingFieldValue
+      type: var
+      note: >-
+        Tracking field value; empty when no tracking field is used. Paired with
+        the TrackingField / TrackingEnabled request options, this is how an
+        integrator watermarks an incremental export so the next run can resume.
+  response: Empty body, status code OK.
+  note: >-
+    The closing half of the loop: WideOrbit expects the integrator to confirm
+    receipt, which makes delivery at-least-once with an application-level ack
+    rather than fire-and-forget. Note the ack uses only partner-id and api-key —
+    the agreement-key is not required here.
+streaming_destinations:
+  note: >-
+    Alongside the HTTP push, an export can be routed to Kafka
+    ({root}/api/RequestData/GetDataKafka, which takes a comma-separated list of
+    broker endpoints), AWS S3, GCP, FTP, e-mail or local storage. The Kafka
+    destination is the only true event-stream target, but it is the INTEGRATOR's
+    broker, not a WideOrbit-hosted stream — WideOrbit publishes no broker of its
+    own for subscribers to connect to.
+security:
+  signature: null
+  hmac: null
+  mtls: null
+  ip_allowlist: >-
+    Not published as addresses, but required in practice — the guide says the
+    WideOrbit DAPI Server endpoint must be whitelisted for FTP delivery, and the
+    integrator's HTTP endpoint must be whitelisted where the Broadcaster
+    firewalls outbound traffic.
+  note: >-
+    There is NO documented request-signing or replay-protection scheme on the
+    outbound delivery. The only authentication the receiver gets is whatever it
+    put into TargetHeaders[] itself. The guide's only transport guidance is
+    "always use HTTPS secure endpoint."
+gaps:
+- No AsyncAPI document.
+- No webhook registration/subscription API; destination is per-request.
+- No event catalog for the WideOrbit.io "source data change notifications" — it is Dev
+  Portal-only.
+- No signing secret, no timestamp/nonce, no replay protection on delivery.
+- No documented retry or dead-letter behaviour; a failed delivery surfaces only as a
+  Failed / PartiallyCompleted / Abandoned RequestStatus.

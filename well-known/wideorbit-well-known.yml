@@ -1,12 +1,18 @@
-generated: '2026-07-21'
+generated: '2026-08-12'
 method: searched
 source: live probes of WideOrbit hosts (.well-known paths) + WO Central Keycloak realm
 description: >-
-  Well-known endpoint discovery for WideOrbit. The WideOrbit.io API gateway
-  (apigateway.wideorbit.com) delegates authentication to the WO Central identity
-  provider, a Keycloak deployment whose "externalgateway" realm publishes a
-  public OpenID Connect discovery document. No security.txt, api-catalog, or
-  ai-plugin.json is published on the marketing or gateway hosts.
+  Well-known endpoint discovery for WideOrbit, re-probed 2026-08-12. The
+  WideOrbit.io API gateway (apigateway.wideorbit.com) delegates authentication to
+  the WO Central identity provider, a Keycloak deployment whose "externalgateway"
+  realm publishes a public OpenID Connect discovery document — the one real
+  well-known document WideOrbit serves. Everything else misses. Note the two
+  distinct failure shapes: on the marketing host every /.well-known/ path 301s to
+  the canonical URL and then 404s, while on the Kong gateway host EVERY path,
+  including ones that do not exist, answers 302 to the Keycloak sign-in. The
+  gateway's blanket 302 is a catch-all, not evidence of a document, and is
+  recorded as a miss.
+hit_count: 2
 endpoints:
 - path: /.well-known/openid-configuration
   host: sso.wocentral.com
@@ -15,11 +21,28 @@ endpoints:
   status: 200
   file: wideorbit-openid-configuration.json
   type: OpenIDConfiguration
+  content_type: application/json
   note: >-
     Production WO Central Keycloak realm backing the WideOrbit.io partner API
-    gateway. A parallel pre-production issuer exists at
-    https://ppe-sso.wocentral.com/auth/realms/externalgateway (also 200).
+    gateway. Re-verified 200 on 2026-08-12.
+- path: /.well-known/openid-configuration
+  host: ppe-sso.wocentral.com
+  realm: externalgateway
+  url: https://ppe-sso.wocentral.com/auth/realms/externalgateway/.well-known/openid-configuration
+  status: 200
+  file: null
+  type: OpenIDConfiguration
+  content_type: application/json
+  note: >-
+    Pre-production issuer, verified 200 on 2026-08-12. Not saved separately —
+    same realm shape as production, differing only in issuer host. Its existence
+    is the evidence that WideOrbit runs a real PPE environment (see
+    sandbox/wideorbit-sandbox.yml).
 - path: /.well-known/security.txt
+  host: www.wideorbit.com
+  status: 404
+  file: null
+- path: /security.txt
   host: www.wideorbit.com
   status: 404
   file: null
@@ -31,3 +54,64 @@ endpoints:
   host: www.wideorbit.com
   status: 404
   file: null
+- path: /.well-known/ai-plugin.json
+  host: www.wideorbit.com
+  status: 404
+  file: null
+- path: /.well-known/agent-card.json
+  host: www.wideorbit.com
+  status: 404
+  file: null
+- path: /.well-known/agent.json
+  host: www.wideorbit.com
+  status: 404
+  file: null
+  note: Legacy pre-0.3 A2A path also probed; also absent.
+- path: /.well-known/security.txt
+  host: sso.wocentral.com
+  status: 404
+  file: null
+- path: /.well-known/agent-card.json
+  host: www.wocentral.com
+  status: 500
+  file: null
+  note: ASP.NET "Runtime Error" page — not a document.
+- path: /.well-known/agent-card.json
+  host: apigateway.wideorbit.com
+  status: 302
+  file: null
+  note: >-
+    MISS. The Kong gateway 302s every path to the Keycloak authorization
+    endpoint whether or not the path exists; the redirect is not evidence of a
+    document.
+- path: /.well-known/oauth-authorization-server
+  host: apigateway.wideorbit.com
+  status: 302
+  file: null
+  note: MISS — same blanket redirect to sign-in.
+- path: /.well-known/oauth-protected-resource
+  host: apigateway.wideorbit.com
+  status: 302
+  file: null
+  note: MISS — same blanket redirect to sign-in.
+- path: /.well-known/openid-configuration
+  host: apigateway.wideorbit.com
+  status: 302
+  file: null
+  note: >-
+    MISS on the gateway itself. Discovery is published by the identity provider
+    at sso.wocentral.com, not by the resource server.
+- path: /.well-known/agent-card.json
+  host: ppe.apigateway.wideorbit.com
+  status: 200
+  file: null
+  note: >-
+    MISS DESPITE THE 200. The body is the "WideOrbit - Sign in" HTML page, which
+    this host returns for every path probed. A 200 that returns an HTML shell is
+    not a document.
+notes: >-
+  security.txt: not served on any host — no SecurityTxt pointer is emitted.
+  ai-plugin.json, api-catalog, agent-card.json, agent.json,
+  oauth-authorization-server and oauth-protected-resource: absent everywhere. The
+  WellKnown pointer in apis.yml is justified solely by the two live Keycloak
+  OpenID Connect discovery documents.

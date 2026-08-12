@@ -1,16 +1,24 @@
 aid: wideorbit
 accessModel:
-  pricing: unknown
-  onboarding: self-serve
+  pricing: contact-sales
+  onboarding: partner-certification
   trial: false
   try_now: false
   public: false
-  label: Self-serve signup
-  confidence: medium
+  label: Certified partner only
+  confidence: high
   source:
   - authentication
-  generated: '2026-07-22'
+  - plans
+  - sandbox
+  generated: '2026-08-12'
   method: derived
+  note: >-
+    Corrected from the prior pass, which read "self-serve signup". There is no
+    self-service path: credentials and even the WO Data API base URL are issued
+    by WideOrbit Support under the certified-Connector program, no pricing is
+    published (wideorbit.com/pricing 404s), and the pre-production environment
+    requires the same WO Central sign-in as production.
 image: https://kinlane-images.s3.amazonaws.com/shared/apis-json/icons/wideorbit.png
 name: WideOrbit
 description: >-
@@ -35,7 +43,7 @@ x-tier: stub
 x-tier-reason: portfolio-lead
 specificationVersion: '0.20'
 created: '2026-07-17'
-modified: '2026-07-21'
+modified: '2026-08-12'
 tags:
 - Company
 - Advertising
@@ -67,6 +75,44 @@ apis:
     url: authentication/wideorbit-authentication.yml
   - type: OAuthScopes
     url: scopes/wideorbit-scopes.yml
+  - type: Sandbox
+    url: sandbox/wideorbit-sandbox.yml
+- name: WO Data API
+  description: >-
+    REST bulk-export service that provides access to WO Network, WO Traffic and
+    WO Omni data "in a unified version agnostic manner". Every export is
+    asynchronous: a submit call returns a RequestId and the result is pushed
+    later, in chunks, to a destination the caller nominates — an HTTP endpoint,
+    FTP, local storage, e-mail, AWS S3, Google Cloud or the caller's own Kafka
+    brokers — with a callback acknowledgement closing the loop. Authenticated by
+    three flat request headers (partner-id, api-key, agreement-key) issued out of
+    band by WideOrbit Support under what the guide calls a "closed authentication
+    model". This is the only WideOrbit API with a publicly readable reference,
+    and that reference is a 60-page PDF; the base URL is templated as {root} and
+    is provisioned per partner rather than published.
+  humanURL: https://www.wideorbit.com/wp-content/uploads/2022/07/WO-DATA-API-Guide-Version-421_New.pdf
+  tags:
+  - Advertising
+  - Media
+  - Data
+  - Bulk Export
+  properties:
+  - type: APIReference
+    url: https://www.wideorbit.com/wp-content/uploads/2022/07/WO-DATA-API-Guide-Version-421_New.pdf
+  - type: Authentication
+    url: authentication/wideorbit-authentication.yml
+  - type: Conventions
+    url: conventions/wideorbit-conventions.yml
+  - type: ErrorCatalog
+    url: errors/wideorbit-problem-types.yml
+  - type: DataModel
+    url: data-model/wideorbit-data-model.yml
+  - type: Webhooks
+    url: asyncapi/wideorbit-webhooks.yml
+  - type: RateLimits
+    url: rate-limits/wideorbit-rate-limits.yml
+  - type: Lifecycle
+    url: lifecycle/wideorbit-lifecycle.yml
 common:
 - type: DomainSecurity
   url: security/wideorbit-domain-security.yml
@@ -98,13 +144,58 @@ common:
   url: well-known/wideorbit-well-known.yml
 - type: Authentication
   url: authentication/wideorbit-authentication.yml
+- type: APIReference
+  url: https://www.wideorbit.com/wp-content/uploads/2022/07/WO-DATA-API-Guide-Version-421_New.pdf
+- type: Packages
+  url: packages/wideorbit-packages.yml
+- type: LLMsTxt
+  url: llms/wideorbit-llms.txt
+- type: Conventions
+  url: conventions/wideorbit-conventions.yml
+- type: ErrorCatalog
+  url: errors/wideorbit-problem-types.yml
+- type: DataModel
+  url: data-model/wideorbit-data-model.yml
+- type: Lifecycle
+  url: lifecycle/wideorbit-lifecycle.yml
+- type: Sandbox
+  url: sandbox/wideorbit-sandbox.yml
+- type: Webhooks
+  url: asyncapi/wideorbit-webhooks.yml
+- type: Plans
+  url: plans/wideorbit-plans-pricing.yml
+- type: RateLimits
+  url: rate-limits/wideorbit-rate-limits.yml
+- type: Integrations
+  url: https://www.wideorbit.com/integrations/
 maintainers:
 - FN: Kin Lane
   email: kin@apievangelist.com
 - FN: APIs.json
   email: info@apis.io
 x-enrichment:
-  date: '2026-07-21'
+  date: '2026-08-12'
   status: enriched
-  artifacts_added: 6
+  artifacts_added: 10
   pass: local-v1
+x-coverage:
+  state: covered
+  reason: pdf-only-docs
+  detail: >-
+    WideOrbit publishes exactly one readable API reference — the 60-page WO Data
+    API Guide 4.2.1 PDF — and no machine-readable contract anywhere: every
+    OpenAPI candidate path on apigateway.wideorbit.com (/openapi.json,
+    /swagger.json, /v1/openapi.json, /swagger/v1/swagger.json, /api-docs, /docs,
+    /redoc) 302s to the WO Central Keycloak sign-in, so the gateway's catalog and
+    specs stay inside the authenticated Dev Portal while the one public reference
+    ships as a PDF.
+  evidence:
+  - url: https://www.wideorbit.com/wp-content/uploads/2022/07/WO-DATA-API-Guide-Version-421_New.pdf
+    status: 200
+  - url: https://apigateway.wideorbit.com/openapi.json
+    status: 302
+  - url: https://ppe.apigateway.wideorbit.com/openapi.json
+    status: 200
+  - url: https://www.wideorbit.com/llms.txt
+    status: 404
+  checked: '2026-08-12'

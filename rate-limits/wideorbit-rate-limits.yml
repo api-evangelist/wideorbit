@@ -1,0 +1,68 @@
+generated: '2026-08-12'
+method: searched
+source: https://www.wideorbit.com/wp-content/uploads/2022/07/WO-DATA-API-Guide-Version-421_New.pdf
+docs: https://www.wideorbit.com/io/
+summary: >-
+  WideOrbit publishes NO request-rate limit for either API surface. The WO Data
+  API Guide 4.2.1 — the only public API reference WideOrbit ships — documents
+  no requests-per-second/minute/day ceiling, no quota, no 429 response, and no
+  RateLimit-*, X-RateLimit-* or Retry-After response headers. What it does
+  publish instead is a PAYLOAD-shaping control: the caller sets ChunkRowsCount
+  to break an export into packets, and the guide warns that oversized chunks
+  will be aborted by the receiving server. Throughput is therefore governed by
+  the per-partner agreement and by WideOrbit's "closed authentication model,
+  where client authentication and usage patterns are managed by WideOrbit",
+  not by a published limit an agent can read at runtime.
+limit_count: 0
+headers_published: false
+status_code_on_exhaustion: null
+response_headers: []
+limits: []
+payload_limits:
+- name: ChunkRowsCount
+  scope: per-request
+  kind: rows-per-chunk
+  min: 10
+  max: 9999
+  applies_to: >-
+    {root}/api/RequestData/GetData and every sibling delivery method
+    (GetDataFtp, GetDataLocalStorage, GetDataEmail, GetDataAWSS3, GetDataGCP,
+    GetDataKafka)
+  note: >-
+    "Number of rows read from the database to be sent in one chunk. The range is
+    10 - 9999." The guide recommends tuning it by row size, export format
+    verbosity (CSV < JSON < XML) and delivery target, and warns that "with large
+    chunk sizes, the server max request size limit can be reached, and the
+    request will be aborted by the target server." The server-side max request
+    size itself is not published.
+- name: 'Accept-Encoding: gzip'
+  scope: per-request
+  kind: compression
+  applies_to: HTTP delivery only
+  note: >-
+    "Only HTTP delivery supports GZip compression for the target server." FTP,
+    email, S3, GCP and Kafka delivery are uncompressed.
+backpressure:
+  mechanism: asynchronous request queue
+  note: >-
+    Rather than rejecting a caller, WO Data API queues the export. GetRequestStatus
+    exposes the queue depth as timings — BroadcasterRequestsQueueDuration,
+    SqlQueryExecutionDuration, FtpUploadDuration — and a request that "expired
+    while waiting in Data API's or Central's queues" is moved to the Abandoned
+    status. That status transition, not a 429, is the observable exhaustion
+    signal.
+evidence:
+- url: https://www.wideorbit.com/wp-content/uploads/2022/07/WO-DATA-API-Guide-Version-421_New.pdf
+  status: 200
+  note: 60-page PDF reference; searched for rate/limit/quota/429/Retry-After — no rate ceiling documented.
+- url: https://apigateway.wideorbit.com/
+  status: 302
+  note: >-
+    Gateway 302s every unauthenticated request to the WO Central Keycloak sign-in,
+    so no live rate-limit headers can be observed anonymously. Kong response
+    headers (x-kong-response-latency, x-kong-request-id) are present but carry no
+    rate-limit fields.
+notes: >-
+  Recorded as an explicit zero. An integrator cannot size a WideOrbit
+  integration from public material; they have to negotiate throughput with
+  WideOrbit as part of the Connector agreement.

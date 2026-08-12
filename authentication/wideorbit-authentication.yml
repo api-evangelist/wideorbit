@@ -1,17 +1,25 @@
-generated: '2026-07-21'
+generated: '2026-08-12'
 method: searched
 source: >-
   WO Central Keycloak OIDC discovery document
   (https://sso.wocentral.com/auth/realms/externalgateway/.well-known/openid-configuration)
-  observed live redirect from https://apigateway.wideorbit.com
+  observed live redirect from https://apigateway.wideorbit.com; plus the
+  Authentication section of the WO Data API Guide 4.2.1
+  (https://www.wideorbit.com/wp-content/uploads/2022/07/WO-DATA-API-Guide-Version-421_New.pdf)
 docs: https://www.wideorbit.com/io/
 summary: >-
+  WideOrbit runs two independent authentication models across two API surfaces.
   The WideOrbit.io partner API gateway is protected by OpenID Connect on a
   Keycloak identity provider hosted at WO Central. Every unauthenticated request
   to apigateway.wideorbit.com is redirected to the "externalgateway" realm
   authorization endpoint (client_id=apigateway, scope=openid, response_type=code),
   confirming the OAuth 2.0 authorization-code flow. The realm also advertises
-  client_credentials for machine-to-machine partner integrations.
+  client_credentials for machine-to-machine partner integrations. The separately
+  documented WO Data API does NOT use that identity provider at all — it
+  authenticates on three flat request headers issued out of band by WideOrbit
+  Support, with a fourth header guarding the diagnostic endpoint. Neither
+  surface offers self-service registration; both are gated on the certified
+  Connector program.
 schemes:
 - id: oidc_externalgateway
   type: openIdConnect
@@ -41,7 +49,62 @@ schemes:
   environments:
     production: https://sso.wocentral.com/auth/realms/externalgateway
     pre-production: https://ppe-sso.wocentral.com/auth/realms/externalgateway
+  applies_to: WideOrbit.io API Gateway (https://apigateway.wideorbit.com)
+- id: wo_data_api_header_keys
+  type: apiKey
+  in: header
+  applies_to: WO Data API (DAPI) 4.2.1
+  source: >-
+    "WO Data API uses HTTP request header information to authorize requests and
+    authenticate users." — WO Data API Guide 4.2.1, Authentication
+  names:
+  - name: partner-id
+    required: true
+    description: Identifies the certified software provider calling the API.
+  - name: api-key
+    required: true
+    description: The secret issued to that partner.
+  - name: agreement-key
+    required: true
+    description: >-
+      Identifies the contractual data area. "Each combination uniquely
+      identifies the area of WO Network, WO Traffic, or WO Omni data to be
+      accessed and the API client requesting access." This header is the tenancy
+      boundary.
+  model: closed
+  model_note: >-
+    "DAPI uses the closed authentication model, where client authentication and
+    usage patterns are managed by WideOrbit." Credentials are provisioned by
+    WideOrbit Support; there is no registration endpoint, no token exchange, no
+    expiry and no rotation procedure documented.
+  failure:
+    status: 401
+    body: '{ "Error": "Unauthorized access" }'
+    note: >-
+      Returned when no valid combination is found. Authentication and
+      authorization failures are not distinguished.
+  callback_subset:
+    note: >-
+      The integrator's callback acknowledgement POST to
+      {root}/api/Requests/Update/{requestId} carries only partner-id and api-key
+      — agreement-key is not required on that call.
+  transport: HTTPS ("We do recommend, always use HTTPS secure endpoint.")
+- id: wo_data_api_diagnostic_key
+  type: apiKey
+  in: header
+  applies_to: '{root}/api/Diagnostic/status_check'
+  names:
+  - name: DiagnosticSecurityKey
+    required: true
+    description: >-
+      A separate GUID-shaped key guarding the broadcaster connection health
+      check. Does not use the partner/api/agreement triple.
 notes: >-
   Access is limited to WideOrbit-certified partners; credentials are provisioned
   through the WideOrbit.io program rather than self-service registration. No
-  API-key or HTTP-basic scheme was observed on the gateway.
+  HTTP-basic scheme was observed on either surface, and no mutual TLS is
+  required of callers (the Keycloak realm advertises tls_client_auth and
+  tls_client_certificate_bound_access_tokens as available client-authentication
+  options, but WideOrbit does not document requiring them). The WO Data API's
+  header keys carry no environment prefix, so a client cannot tell a test
+  credential from a live one by inspection.
